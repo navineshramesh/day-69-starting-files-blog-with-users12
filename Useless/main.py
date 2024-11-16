@@ -128,7 +128,7 @@ with app.app_context():
 
 with app.app_context():
         try:
-            with open("specified_number.txt", 'r') as file:
+            with open("../specified_number.txt", 'r') as file:
                 number = int(file.read().strip())
         except (FileNotFoundError, ValueError):
             number = 0
@@ -145,7 +145,7 @@ with app.app_context():
                 continue
 
             number += 1
-            with open("specified_number.txt", 'w') as file:
+            with open("../specified_number.txt", 'w') as file:
                 file.write(str(number))
 
             new_post = BlogPost(
