@@ -1,0 +1,235 @@
+{% include "header.html" %} <!-- Include your header file -->
+
+<!-- Cookie Consent Popup -->
+<div id="cookie-overlay" class="cookie-overlay"></div>
+<div id="cookie-popup" class="cookie-popup">
+    <div class="cookie-popup-content">
+        <p>We use cookies to ensure you get the best experience on our website. By continuing to browse, you consent to our use of cookies.</p>
+        <button id="accept-cookies" class="btn btn-primary">Accept</button>
+        <button id="deny-cookies" class="btn btn-secondary">Deny</button>
+    </div>
+</div>
+
+<!-- Warning if cookies are denied -->
+<div id="cookie-deny-warning" style="display:none;">
+    <p>You must accept cookies to continue using the website.</p>
+    <button id="go-back-to-popup">Go Back to Popup</button>
+</div>
+
+<!-- Page Header -->
+<header class="masthead" style="background-image: url('../static/assets/img/home-bg.jpg')">
+    <div class="container position-relative px-4 px-lg-5">
+        <div class="row gx-4 gx-lg-5 justify-content-center">
+            <div class="col-md-10 col-lg-8 col-xl-7">
+                <div class="site-heading">
+                    <h1>Navinesh's Blog</h1>
+                    <h2>A collection of news articles worldwide.</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="container px-4 px-lg-5">
+    <div class="row gx-4 gx-lg-5 justify-content-center">
+        <div class="col-md-10 col-lg-8 col-xl-7">
+            {% for post in all_posts %}
+                <div class="post-preview">
+                    <a href="{{ url_for('show_post', post_id=post.id) }}">
+                        <h2 class="post-title">{{ post.title }}</h2>
+                        <h3 class="post-subtitle">{{ post.subtitle }}</h3>
+                    </a>
+                    <p class="post-meta">
+                        Posted by <a href="#">{{ post.author }}</a> on {{ post.date }}
+                        <a href="{{ link }}">Click here for more info</a>
+                        {% if current_user.id == 1 %}
+                            <a href="{{ url_for('delete_post', post_id=post.id) }}">✘</a>
+                        {% endif %}
+                    </p>
+                </div>
+                <hr class="my-4" />
+            {% endfor %}
+
+            <!-- Create New Post (visible to admin) -->
+            {% if current_user.id == 1 %}
+                <div class="d-flex justify-content-end mb-4">
+                    <a class="btn btn-primary float-right" href="{{ url_for('add_new_post') }}">Create New Post</a>
+                </div>
+            {% endif %}
+
+            <!-- Older Posts Link -->
+            <div class="d-flex justify-content-end mb-4">
+                <a class="btn btn-secondary text-uppercase" href="#!">Older Posts →</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "footer.html" %} <!-- Include your footer file -->
+
+<!-- CSS Styles -->
+<style>
+    /* General overlay styles */
+    .cookie-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 9998;
+        display: none; /* Hidden by default */
+    }
+
+    /* Cookie consent popup styles */
+    #cookie-popup {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        text-align: center;
+        padding: 20px;
+        z-index: 9999;
+        pointer-events: auto; /* Ensure the popup is interactive */
+    }
+
+    .cookie-popup-content {
+        display: inline-block;
+        background-color: #333;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    #cookie-popup p {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .cookie-popup button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .cookie-popup .btn-primary {
+        background-color: #28a745;
+    }
+
+    .cookie-popup .btn-secondary {
+        background-color: #dc3545;
+    }
+
+    /* Warning message when cookies are denied */
+    #cookie-deny-warning {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: #dc3545;
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        display: none;
+        z-index: 9998;
+        pointer-events: auto; /* Ensure the warning is interactive */
+    }
+
+    #cookie-deny-warning p {
+        font-size: 18px;
+    }
+
+    #cookie-deny-warning button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background-color: #28a745;
+        color: white;
+    }
+
+    /* Disable interaction with the page until accept is clicked */
+    body.blocked {
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    /* Fade effect */
+    body {
+        transition: opacity 1s ease;
+        opacity: 1;
+    }
+
+    .fade-out {
+        opacity: 0;
+    }
+</style>
+
+<!-- JavaScript Logic -->
+<script>
+    // Function to show or hide the overlay and popup
+    function togglePopup() {
+        document.getElementById('cookie-overlay').style.display = 'flex';
+        document.getElementById('cookie-popup').style.display = 'block';
+    }
+
+    // Disable all page interactions except the cookie popup
+    function blockInteractions() {
+        document.body.classList.add('blocked');
+    }
+
+    // Enable all page interactions
+    function enableInteractions() {
+        document.body.classList.remove('blocked');
+    }
+
+    // Check if the user has accepted or denied the cookies
+    if (!localStorage.getItem('cookiesAccepted')) {
+        // Show the overlay and popup if not accepted/denied yet
+        togglePopup();
+        blockInteractions();  // Block all interactions at the start
+    } else if (localStorage.getItem('cookiesAccepted') === 'false') {
+        // Show warning message if cookies were denied
+        document.getElementById('cookie-deny-warning').style.display = 'block';
+        blockInteractions();  // Block all interactions
+    }
+
+    // Handle Accept button click
+    document.getElementById('accept-cookies').addEventListener('click', function() {
+        // Store the response in local storage to prevent popup from showing again
+        localStorage.setItem('cookiesAccepted', 'true');
+        // Hide the overlay and popup
+        document.getElementById('cookie-overlay').style.display = 'none';
+        document.getElementById('cookie-popup').style.display = 'none';
+        // Enable page interactions
+        enableInteractions();
+    });
+
+    // Handle Deny button click
+    document.getElementById('deny-cookies').addEventListener('click', function() {
+        // Store the response in local storage to prevent popup from showing again
+        localStorage.setItem('cookiesAccepted', 'false');
+        // Hide the overlay and popup
+        document.getElementById('cookie-overlay').style.display = 'none';
+        document.getElementById('cookie-popup').style.display = 'none';
+        // Show warning message
+        document.getElementById('cookie-deny-warning').style.display = 'block';
+        // Block interactions
+        blockInteractions();
+    });
+
+    // Go back to the popup when the user clicks the button in the warning
+    document.getElementById('go-back-to-popup').addEventListener('click', function() {
+        // Hide warning and show the popup again
+        document.getElementById('cookie-deny-warning').style.display = 'none';
+        togglePopup();
+    });
+</script>
+
+
+
