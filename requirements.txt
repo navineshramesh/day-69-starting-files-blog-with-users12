@@ -12,4 +12,4 @@ gunicorn==21.2.0
 psycopg2-binary==2.9.9
 captcha==0.6.0
 requests==2.32.3
-Torch==2.5.1
+torch==2.5.1
