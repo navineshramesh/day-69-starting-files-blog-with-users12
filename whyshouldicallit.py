@@ -10,13 +10,12 @@ from sqlalchemy import Integer, String, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 from functools import wraps
-import transformers
 from captcha.image import ImageCaptcha
 import requests
 import datetime as dt
 import smtplib
 import random
-import torch
+
 import string
 import os
 import sqlite3
@@ -26,7 +25,7 @@ from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
-from generator import generate_long_paragraph
+
 import flask_bootstrap
 
 class CommentForm(FlaskForm):
@@ -118,42 +117,6 @@ with app.app_context():
     db.create_all()
 
 
-with app.app_context():
-        try:
-            with open("specified_number.txt", 'r') as file:
-                number = int(file.read().strip())
-        except (FileNotFoundError, ValueError):
-            number = 0
-
-        for article_number, article in enumerate(ten_articles, start=1):
-            title = article["title"]
-
-            link = article["url"]
-
-            # Only increment the number if the title is unique
-            existing_post = BlogPost.query.filter_by(title=title).first()
-            if existing_post:
-                print(f"Skipping duplicate article: {title}")
-                continue
-
-            number += 1
-            with open("specified_number.txt", 'w') as file:
-                file.write(str(number))
-            description = generate_long_paragraph(title,max_length=450)
-            new_post = BlogPost(
-                title=title,
-                subtitle="Breaking News",
-                body=f"{description}\n<a href='{link}'>Click here for more info</a>",
-                author="Navinesh Ramesh",
-                img_url="https://imgs.search.brave.com/BW__i2u-_aUDX7WcqOc0ZZIrdXUDN73s-jcnwRqSN8k/rs:fit:1024:704:1/g:ce/aHR0cHM6Ly9zdGF0/aWMwMS5ueXQuY29t/L2ltYWdlcy8yMDEx/LzAxLzE0L2FydHMv/MTRNT1ZJTkctc3Bh/bi9NT1ZJTkctanVt/Ym8uanBn",
-                date=str(dt.datetime.today())
-            )
-
-            db.session.add(new_post)
-            db.session.commit()
-            print("Article added successfully.")
-
-
 # Helper Functions for CAPTCHA
 def generate_captcha_text(length=5):
     letters = string.ascii_uppercase + string.digits
@@ -188,6 +151,16 @@ with app.app_context():
     db.create_all()
 
 
+def delete_captcha_image(image_path):
+    """Deletes the CAPTCHA image file."""
+    try:
+        if os.path.exists(image_path):
+            os.remove(image_path)
+            print(f"Deleted CAPTCHA image: {image_path}")
+        else:
+            print(f"CAPTCHA image {image_path} not found.")
+    except Exception as e:
+        print(f"Error deleting CAPTCHA image: {e}")
 # Routes
 @app.route('/')
 def get_all_posts():
@@ -195,7 +168,7 @@ def get_all_posts():
     posts = BlogPost.query.order_by(BlogPost.id.desc()).all()
 
     # Render the template with the posts
-    return render_template("index.html", all_posts=posts,link=link,current_user=current_user)
+    return render_template("index.html", all_posts=posts,current_user=current_user)
 @app.route("/terms")
 def show_terms():
     return render_template("legalterms.html")
@@ -203,26 +176,39 @@ def show_terms():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
+        captcha_image_path = session.get("captcha_image_path")
+
+        # Validate CAPTCHA
         if form.captcha.data != session.get("captcha_text"):
             flash("Incorrect CAPTCHA, please try again.", "danger")
             return redirect(url_for('register'))
 
+        # Clear CAPTCHA from session
         session.pop("captcha_text", None)
         session.pop("captcha_image_path", None)
 
+        # Check if user already exists
         if User.query.filter_by(email=form.email.data).first():
             flash("You've already signed up with that email, log in instead!", "info")
             return redirect(url_for('login'))
 
+        # Hash the password and create the user
         hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
         new_user = User(email=form.email.data, name=form.name.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
 
+        # Delete CAPTCHA image after use
+        if captcha_image_path:
+            delete_captcha_image(captcha_image_path)
+
+        # Log in the user
         login_user(new_user)
         flash("Registration successful! Welcome!", "success")
+
         return redirect(url_for("get_all_posts"))
 
+    # Generate a new CAPTCHA if not already in session
     if "captcha_text" not in session:
         captcha_text = generate_captcha_text()
         captcha_image_path = generate_captcha_image(captcha_text)
@@ -233,25 +219,34 @@ def register():
     return render_template("register.html", form=form, captcha_image=captcha_image)
 
 
+# Login route
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
+        captcha_image_path = session.get("captcha_image_path")
+
+        # Validate CAPTCHA
         if form.captcha.data != session.get("captcha_text"):
             flash("Incorrect CAPTCHA, please try again.", "danger")
             return redirect(url_for('login'))
 
+        # Clear CAPTCHA from session
         session.pop("captcha_text", None)
         session.pop("captcha_image_path", None)
 
+        # Verify user credentials
         user = User.query.filter_by(email=form.email.data).first()
         if not user or not check_password_hash(user.password, form.password.data):
             flash("Invalid credentials, please try again.", "danger")
             return redirect(url_for('login'))
 
+        # Log in the user
         login_user(user)
+        flash("Login successful!", "success")
         return redirect(url_for('get_all_posts'))
 
+    # Generate CAPTCHA if not in session
     if "captcha_text" not in session:
         captcha_text = generate_captcha_text()
         captcha_image_path = generate_captcha_image(captcha_text)
@@ -259,8 +254,12 @@ def login():
         session["captcha_image_path"] = captcha_image_path
 
     captcha_image = session.get("captcha_image_path")
-    return render_template("login.html", form=form, captcha_image=captcha_image)
 
+    # Delete CAPTCHA image after use
+    if captcha_image_path:
+        delete_captcha_image(captcha_image_path)
+
+    return render_template("login.html", form=form, captcha_image=captcha_image)
 
 @app.route("/logout")
 def logout():

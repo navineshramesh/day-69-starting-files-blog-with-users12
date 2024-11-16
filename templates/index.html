@@ -42,7 +42,7 @@
                     </a>
                     <p class="post-meta">
                         Posted by <a href="#">{{ post.author }}</a> on {{ post.date }}
-                        <a href="{{ link }}">Click here for more info</a>
+
                         {% if current_user.id == 1 %}
                             <a href="{{ url_for('delete_post', post_id=post.id) }}">✘</a>
                         {% endif %}
