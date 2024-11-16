@@ -34,7 +34,7 @@ class CommentForm(FlaskForm):
 # Initialize the Flask app and configurations
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI","sqlite:///posts.db")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
