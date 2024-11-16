@@ -1,3 +1,4 @@
+import captcha
 from flask import Flask, abort, render_template, redirect, url_for, flash, request, session
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor,CKEditorField
@@ -10,8 +11,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 from functools import wraps
 from captcha.image import ImageCaptcha
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import requests
 import datetime as dt
 import smtplib
@@ -20,6 +19,7 @@ import torch
 import string
 import os
 import sqlite3
+print(captcha.__version__)
 print(torch.__version__)
 # Import your forms from forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
