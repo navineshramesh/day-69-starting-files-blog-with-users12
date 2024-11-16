@@ -32,8 +32,8 @@ class CommentForm(FlaskForm):
     submit = SubmitField("Submit Comment")
 # Initialize the Flask app and configurations
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SECRET_KEY'] = os.environ.get("Flask_key")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
@@ -55,10 +55,9 @@ listed_companies= random.choice(list_of_companies)
 
 db.init_app(app)
 STOCK = "TSLA"
-OWN_EMAIL = "abc066194@gmail.com"
-OWN_PASSWORD = "lnwljxkdoguhavqm"
+
 NEWS_URL = "https://newsapi.org/v2/everything?"
-news_apikey = "b63590d06cb6464199b88a36800af0d7"
+news_apikey = os.environ.get("Api_key")
 COMPANY_NAME = f"{listed_companies}"
 
 news_parameters = {
@@ -358,5 +357,5 @@ def send_email(name, email, phone, message):
          connection.sendmail(os.environ.get("Email"), os.environ.get("Toemail"), email_message)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=False, port=5002)
 
