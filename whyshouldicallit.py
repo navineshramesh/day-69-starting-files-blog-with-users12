@@ -10,6 +10,7 @@ from sqlalchemy import Integer, String, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 from functools import wraps
+import transformers
 from captcha.image import ImageCaptcha
 import requests
 import datetime as dt
@@ -20,13 +21,14 @@ import string
 import os
 import sqlite3
 
-print(torch.__version__)
 # Import your forms from forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from generator import generate_long_paragraph
+import flask_bootstrap
+
 class CommentForm(FlaskForm):
     comment = CKEditorField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit Comment")
