@@ -19,7 +19,7 @@ import torch
 import string
 import os
 import sqlite3
-print(requests.__version__)
+
 print(torch.__version__)
 # Import your forms from forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
