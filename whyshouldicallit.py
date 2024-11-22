@@ -171,7 +171,7 @@ def get_all_posts():
     return render_template("index.html", all_posts=posts,current_user=current_user)
 @app.route("/terms")
 def show_terms():
-    return render_template("legalterms.html")
+    return render_template("privacyandpolicy.html")
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
@@ -218,13 +218,13 @@ def register():
     captcha_image = session.get("captcha_image_path")
     return render_template("register.html", form=form, captcha_image=captcha_image)
 
-
-# Login route
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
+    captcha_image_path = None  # Initialize captcha_image_path to None by default
+
     if form.validate_on_submit():
-        captcha_image_path = session.get("captcha_image_path")
+        captcha_image_path = session.get("captcha_image_path")  # Ensure we get the value from the session
 
         # Validate CAPTCHA
         if form.captcha.data != session.get("captcha_text"):
@@ -249,7 +249,7 @@ def login():
     # Generate CAPTCHA if not in session
     if "captcha_text" not in session:
         captcha_text = generate_captcha_text()
-        captcha_image_path = generate_captcha_image(captcha_text)
+        captcha_image_path = generate_captcha_image(captcha_text)  # Ensure this is assigned
         session["captcha_text"] = captcha_text
         session["captcha_image_path"] = captcha_image_path
 
@@ -358,5 +358,5 @@ def send_email(name, email, phone, message):
          connection.sendmail(os.environ.get("Email"), os.environ.get("Toemail"), email_message)
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5002)
+    app.run(debug=True, port=5002)
 
