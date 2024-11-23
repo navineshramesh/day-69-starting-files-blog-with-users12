@@ -352,7 +352,8 @@ def contact():
     data = request.form
     send_email(data["name"], data["email"], data["phone"], data["message"])
     try:
-     text= f"Dear {data["name"]},\nThank you for reaching out to us. We’ve received your message and understand your concern. We sincerely apologize for any inconvenience you may have experienced.\nPlease rest assured that our team is currently reviewing the issue you raised. We take all feedback seriously and are committed to resolving your concern as quickly as possible. If we need any additional information from you to better address the matter, we will reach out.\nYour patience and understanding are greatly appreciated as we work toward a solution. Should you have any further questions or if there is anything else we can assist you with, please feel free to contact us.\nBest regards, Navinesh Ramesh"
+     text = f'Dear {data["name"]},\nThank you for reaching out to us. We’ve received your message and understand your concern. We sincerely apologize for any inconvenience you may have experienced.\nPlease rest assured that our team is currently reviewing the issue you raised. We take all feedback seriously and are committed to resolving your concern as quickly as possible. If we need any additional information from you to better address the matter, we will reach out.\nYour patience and understanding are greatly appreciated as we work toward a solution. Should you have any further questions or if there is anything else we can assist you with, please feel free to contact us.\nBest regards, Navinesh Ramesh'
+
      msg = MIMEText(text, 'plain', _charset='utf-8')
      send_reply(msg,data['email'])
      with (open("templates/complaints.html",'a') as file):
