@@ -1,4 +1,5 @@
 
+from email.mime.text import MIMEText
 from flask import Flask, abort, render_template, redirect, url_for, flash, request, session
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor,CKEditorField
@@ -192,6 +193,9 @@ def register():
             flash("You've already signed up with that email, log in instead!", "info")
             return redirect(url_for('login'))
 
+        if 'php' in form.email.data or 'php' in form.password.data or 'php' in form.name.data:
+                abort(400, description="PHP links are not allowed.")
+
         # Hash the password and create the user
         hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
         new_user = User(email=form.email.data, name=form.name.data, password=hashed_password)
@@ -347,6 +351,17 @@ def contact():
    if request.method == "POST":
     data = request.form
     send_email(data["name"], data["email"], data["phone"], data["message"])
+    try:
+     text= f"Dear {data["name"]},\nThank you for reaching out to us. We’ve received your message and understand your concern. We sincerely apologize for any inconvenience you may have experienced.\nPlease rest assured that our team is currently reviewing the issue you raised. We take all feedback seriously and are committed to resolving your concern as quickly as possible. If we need any additional information from you to better address the matter, we will reach out.\nYour patience and understanding are greatly appreciated as we work toward a solution. Should you have any further questions or if there is anything else we can assist you with, please feel free to contact us.\nBest regards, Navinesh Ramesh"
+     msg = MIMEText(text, 'plain', _charset='utf-8')
+     send_reply(msg,data['email'])
+     with (open("templates/complaints.html",'a') as file):
+
+         file.write(f"\n<h1>{data['name']}<h1>\n<p>{data['message']}</p>")
+
+    except Exception as e:
+        print(e)
+        return render_template("contact.html",msg_sent=False)
     return render_template("contact.html", msg_sent=True)
    return render_template("contact.html", msg_sent=False)
 def send_email(name, email, phone, message):
@@ -356,6 +371,17 @@ def send_email(name, email, phone, message):
          connection.starttls()
          connection.login(os.environ.get("Email"),os.environ.get("Password"))
          connection.sendmail(os.environ.get("Email"), os.environ.get("Toemail"), email_message)
+def send_reply(message,to_email):
+
+   with smtplib.SMTP("smtp.gmail.com", port=587) as connection:
+
+         connection.starttls()
+         connection.login(os.environ.get("Email"),os.environ.get("Password"))
+         connection.sendmail(os.environ.get("Email"), to_email, msg=f"{message}")
+@admin_only
+@app.route('/complaints')
+def complaints():
+    return render_template("complaints.html")
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)

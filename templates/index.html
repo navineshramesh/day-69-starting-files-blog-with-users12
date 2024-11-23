@@ -4,9 +4,11 @@
 <div id="cookie-overlay" class="cookie-overlay"></div>
 <div id="cookie-popup" class="cookie-popup">
     <div class="cookie-popup-content">
-        <p>We use cookies to ensure you get the best experience on our website. By continuing to browse, you consent to our use of cookies.</p>
+        <p>We use cookies and other policies to ensure you get the best experience on our website. By continuing to browse, you consent to our use of cookies and the terms outlined in our Privacy Policy.</p>
         <button id="accept-cookies" class="btn btn-primary">Accept</button>
         <button id="deny-cookies" class="btn btn-secondary">Deny</button>
+        <p><a href="{{ url_for('show_terms') }}" target="_blank" class="cookie-info-link">For more info</a></p>
+
     </div>
 </div>
 
@@ -229,7 +231,24 @@
         document.getElementById('cookie-deny-warning').style.display = 'none';
         togglePopup();
     });
+
+
 </script>
+    <style>
+    /* Link styles */
+    .cookie-info-link {
+        color: #007bff; /* Green color, can be adjusted */
+        text-decoration: underline;
+        font-size: 14px;
+    }
 
+    /* Hover effect */
+    .cookie-info-link:hover {
+        color: #0056b3; /* Red color on hover */
+    }
 
-
+    /* Add spacing between the link and the buttons */
+    #cookie-popup p {
+        margin-bottom: 10px;
+    }
+</style>
