@@ -70,3 +70,22 @@
 </article>
 
 {% include "footer.html" %}
+<style>
+  /* Add transition to the body for smooth fade-in */
+  body {
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+
+  /* Fade in the content after page load */
+  body.loaded {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  // Add 'loaded' class to body to trigger fade-in effect
+  window.addEventListener('load', function() {
+    document.body.classList.add('loaded');
+  });
+</script>
