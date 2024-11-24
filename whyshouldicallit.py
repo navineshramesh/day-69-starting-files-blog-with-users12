@@ -264,7 +264,9 @@ def login():
         delete_captcha_image(captcha_image_path)
 
     return render_template("login.html", form=form, captcha_image=captcha_image)
-
+@app.route("/sitemap.xml")
+def map():
+    return  render_template("sitemap.xml")
 @app.route("/logout")
 def logout():
     logout_user()
