@@ -1,4 +1,3 @@
-
 from email.mime.text import MIMEText
 from flask import Flask, abort, render_template, redirect, url_for, flash, request, session
 from flask_bootstrap import Bootstrap5
@@ -12,6 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 from functools import wraps
 from captcha.image import ImageCaptcha
+import time
 import requests
 import datetime as dt
 import smtplib
@@ -40,7 +40,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
 Bootstrap5(app)
-
+app.config['RECAPTCHA_PUBLIC_KEY'] = '6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO'  # Public key (Site key)
+app.config['RECAPTCHA_PRIVATE_KEY'] = '6LfPMYsqAAAAAHVtW7ll9IY5dh-Uj_WKb8GlrMIZ'  # Private key (Secret key)
 
 
 # Initialize SQLAlchemy and Flask-Login
@@ -119,16 +120,6 @@ with app.app_context():
 
 
 # Helper Functions for CAPTCHA
-def generate_captcha_text(length=5):
-    letters = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(letters) for _ in range(length))
-
-
-def generate_captcha_image(text):
-    image = ImageCaptcha(width=280, height=90)
-    image_path = f"{CAPTCHA_FOLDER}/{text}.png"
-    image.write(text, image_path)
-    return f"{text}.png"
 
 
 # User Loader for Flask-Login
@@ -151,17 +142,6 @@ def admin_only(f):
 with app.app_context():
     db.create_all()
 
-
-def delete_captcha_image(image_path):
-    """Deletes the CAPTCHA image file."""
-    try:
-        if os.path.exists(image_path):
-            os.remove(image_path)
-            print(f"Deleted CAPTCHA image: {image_path}")
-        else:
-            print(f"CAPTCHA image {image_path} not found.")
-    except Exception as e:
-        print(f"Error deleting CAPTCHA image: {e}")
 # Routes
 @app.route('/')
 def get_all_posts():
@@ -173,97 +153,148 @@ def get_all_posts():
 @app.route("/terms")
 def show_terms():
     return render_template("privacyandpolicy.html")
+
+
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
+
+    # Handle GET request: reset reCAPTCHA expiry time when the page is loaded
+    if request.method == 'GET':
+        # Reset the reCAPTCHA session expiry to 2 minutes after loading the page
+        session['captcha_expiry'] = time.time() + 120  # 2 minutes from now
+
+    # Handle POST request: when the user submits the registration form
     if form.validate_on_submit():
-        captcha_image_path = session.get("captcha_image_path")
+        # Check if the reCAPTCHA token has expired
+        if 'captcha_expiry' in session and time.time() > session['captcha_expiry']:
+            flash("reCAPTCHA has expired, please try again.", "warning")
+            return redirect(url_for('register'))  # Reload the page to reset CAPTCHA
 
-        # Validate CAPTCHA
-        if form.captcha.data != session.get("captcha_text"):
-            flash("Incorrect CAPTCHA, please try again.", "danger")
-            return redirect(url_for('register'))
+        # Retrieve the reCAPTCHA response token
+        response_token = request.form.get('g-recaptcha-response')
 
-        # Clear CAPTCHA from session
-        session.pop("captcha_text", None)
-        session.pop("captcha_image_path", None)
+        if not response_token:
+            flash("reCAPTCHA verification failed. Please try again.", "danger")
+            return redirect(url_for('register'))  # Reload the page if no CAPTCHA token
 
-        # Check if user already exists
-        if User.query.filter_by(email=form.email.data).first():
-            flash("You've already signed up with that email, log in instead!", "info")
-            return redirect(url_for('login'))
+        # Verify reCAPTCHA with the response token
+        secret_key = app.config['RECAPTCHA_PRIVATE_KEY']
+        if verify_recaptcha(response_token, secret_key):
+            # Check if the email already exists in the database
+            if User.query.filter_by(email=form.email.data).first():
+                flash("You've already signed up with that email, log in instead!", "info")
+                return redirect(url_for('login'))  # Redirect to login if email exists
 
-        if 'php' in form.email.data or 'php' in form.password.data or 'php' in form.name.data:
-                abort(400, description="PHP links are not allowed.")
+            # Prevent the use of "php" in any of the form fields (for security reasons)
+            if 'php' in form.email.data or 'php' in form.password.data or 'php' in form.name.data:
+                abort(400, description="PHP links are not allowed.")  # Abort with a bad request error
 
-        # Hash the password and create the user
-        hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
-        new_user = User(email=form.email.data, name=form.name.data, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
+            # Hash the password before storing it in the database
+            hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
 
-        # Delete CAPTCHA image after use
-        if captcha_image_path:
-            delete_captcha_image(captcha_image_path)
+            # Create a new user and save them to the database
+            new_user = User(email=form.email.data, name=form.name.data, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
 
-        # Log in the user
-        login_user(new_user)
-        flash("Registration successful! Welcome!", "success")
+            # Log in the new user immediately after registration
+            login_user(new_user)
 
-        return redirect(url_for("get_all_posts"))
+            flash("Registration successful! Welcome!", "success")
+            return redirect(url_for("get_all_posts"))  # Redirect to the main page after registration
 
-    # Generate a new CAPTCHA if not already in session
-    if "captcha_text" not in session:
-        captcha_text = generate_captcha_text()
-        captcha_image_path = generate_captcha_image(captcha_text)
-        session["captcha_text"] = captcha_text
-        session["captcha_image_path"] = captcha_image_path
+        else:
+            flash("reCAPTCHA verification failed. Please try again.", "danger")
+            return redirect(url_for('register'))  # Reload the page if reCAPTCHA fails
 
-    captcha_image = session.get("captcha_image_path")
-    return render_template("register.html", form=form, captcha_image=captcha_image)
-
-@app.route('/login', methods=["GET", "POST"])
+    return render_template("register.html", form=form)
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    captcha_image_path = None  # Initialize captcha_image_path to None by default
 
+    # Handle GET request, reset the CAPTCHA on page load
+    if request.method == 'GET':
+        # Ensure the reCAPTCHA session expires after 2 minutes (for fresh verification on next load)
+        session['captcha_expiry'] = time.time() + 120  # 2 minutes from now
+
+    # Handle POST request when user submits the form
     if form.validate_on_submit():
-        captcha_image_path = session.get("captcha_image_path")  # Ensure we get the value from the session
-
-        # Validate CAPTCHA
-        if form.captcha.data != session.get("captcha_text"):
-            flash("Incorrect CAPTCHA, please try again.", "danger")
+        # Check if CAPTCHA expired
+        if 'captcha_expiry' in session and time.time() > session['captcha_expiry']:
+            flash("reCAPTCHA has expired, please try again.", "warning")
             return redirect(url_for('login'))
 
-        # Clear CAPTCHA from session
-        session.pop("captcha_text", None)
-        session.pop("captcha_image_path", None)
+        # Store the CAPTCHA expiry time for the next verification
+        session['captcha_expiry'] = time.time() + 120  # Reset expiry time to 2 minutes
 
-        # Verify user credentials
-        user = User.query.filter_by(email=form.email.data).first()
-        if not user or not check_password_hash(user.password, form.password.data):
-            flash("Invalid credentials, please try again.", "danger")
+        response_token = request.form.get('g-recaptcha-response')
+
+        # If the reCAPTCHA token is missing, return an error
+        if not response_token:
+            flash("reCAPTCHA verification failed. Please try again.", "danger")
             return redirect(url_for('login'))
 
-        # Log in the user
-        login_user(user)
-        flash("Login successful!", "success")
-        return redirect(url_for('get_all_posts'))
+        secret_key = app.config['RECAPTCHA_PRIVATE_KEY']
 
-    # Generate CAPTCHA if not in session
-    if "captcha_text" not in session:
-        captcha_text = generate_captcha_text()
-        captcha_image_path = generate_captcha_image(captcha_text)  # Ensure this is assigned
-        session["captcha_text"] = captcha_text
-        session["captcha_image_path"] = captcha_image_path
+        try:
+            # Verify the reCAPTCHA token with Google's API
+            if not verify_recaptcha(response_token, secret_key):
+                flash("reCAPTCHA verification failed. Please try again.", "danger")
+                return redirect(url_for('login'))
 
-    captcha_image = session.get("captcha_image_path")
+            # Check user credentials
+            user = User.query.filter_by(email=form.email.data).first()
+            if not user or not check_password_hash(user.password, form.password.data):
+                flash("Invalid credentials, please try again.", "danger")
+            else:
+                login_user(user)  # Log the user in
+                flash("Login successful!", "success")
+                return redirect(url_for('get_all_posts'))
 
-    # Delete CAPTCHA image after use
-    if captcha_image_path:
-        delete_captcha_image(captcha_image_path)
+        except Exception as e:
+            flash("An error occurred during login. Please try again.", "danger")
+            print(f"Error: {e}")
+            return redirect(url_for('login'))  # Keep user on the login page
 
-    return render_template("login.html", form=form, captcha_image=captcha_image)
+    return render_template("login.html", form=form)
+def verify_recaptcha(response_token, secret_key):
+    url = "https://www.google.com/recaptcha/api/siteverify"
+    payload = {
+        'secret': secret_key,
+        'response': response_token,
+        'remoteip': request.remote_addr  # Optional: Capture user's IP address
+    }
+
+    try:
+        # Send POST request to Google's reCAPTCHA verification API
+        response = requests.post(url, data=payload)
+        response.raise_for_status()  # Raise HTTPError for bad status codes
+        result = response.json()
+
+        # Check if reCAPTCHA verification was successful
+        if result.get('success'):
+            return True
+        else:
+            # Handle reCAPTCHA error codes (e.g., timeout or duplicate)
+            error_codes = result.get('error-codes', [])
+            if 'timeout-or-duplicate' in error_codes:
+                return True  # Ignore 'timeout-or-duplicate' error
+            else:
+                print("reCAPTCHA verification failed with errors:", error_codes)
+                return False
+
+    except requests.exceptions.RequestException as e:
+        # Handle any request-related errors (e.g., network issues)
+        print(f"Error during reCAPTCHA verification: {e}")
+        return False
+    except ValueError as e:
+        # Handle JSON parsing errors
+        print(f"Error parsing reCAPTCHA response JSON: {e}")
+        return False
+
+
+
 @app.route("/sitemap.xml")
 def map():
     return  render_template("sitemap.xml")
@@ -344,9 +375,6 @@ def show_post(post_id):
 @app.route("/about")
 def about():
     return render_template("about.html")
-MAIL_ADDRESS = "defg0994@gmail.com"
-MAIL_APP_PW = "gllaolnduoovudsq"
-To_mail="navineshmail@gmail.com"
 
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
@@ -388,4 +416,3 @@ def complaints():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5002)
-

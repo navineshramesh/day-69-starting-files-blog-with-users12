@@ -2,15 +2,10 @@
 {% include "header.html" %}
 
 <link rel="canonical" href="{{ url_for('get_all_posts') }}">
-
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <!-- Page Header -->
-<header
-  class="masthead"
-  style="background-image: url('../static/assets/img/login-bg.jpg')"
->
-
-
+<header class="masthead" style="background-image: url('../static/assets/img/login-bg.jpg')">
   <div class="container position-relative px-4 px-lg-5">
     <div class="row gx-4 gx-lg-5 justify-content-center">
       <div class="col-md-10 col-lg-8 col-xl-7">
@@ -41,13 +36,13 @@
           {% endif %}
         {% endwith %}
 
-        <!-- Rendering the registration form here -->
+        <!-- Login Form -->
         <form method="POST">
           {{ form.hidden_tag() }}
 
           <div class="form-group">
             {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control", size=32) }}<br>
+            {{ form.email(class="form-control", size=32) }}
             {% for error in form.email.errors %}
               <div class="text-danger">{{ error }}</div>
             {% endfor %}
@@ -55,29 +50,19 @@
 
           <div class="form-group">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control", size=32) }}<br>
+            {{ form.password(class="form-control", size=32) }}
             {% for error in form.password.errors %}
               <div class="text-danger">{{ error }}</div>
             {% endfor %}
           </div>
 
+          <!-- reCAPTCHA v2 Widget -->
+          <div class="g-recaptcha" data-sitekey="6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO"></div>
+          {% for error in form.recaptcha.errors %}
+            <div class="text-danger">{{ error }}</div>
+          {% endfor %}
 
-          {% if captcha_image %}
-              <div class="form-group">
-                  <img src="{{ url_for('static', filename='captchas/' + captcha_image) }}" alt="CAPTCHA Image">
-              </div>
-          {% else %}
-              <p>No CAPTCHA image available.</p>
-          {% endif %}
-
-          <div class="form-group">
-            {{ form.captcha.label(class="form-label") }}
-            {{ form.captcha(class="form-control", size=32) }}<br>
-            {% for error in form.captcha.errors %}
-              <div class="text-danger">{{ error }}</div>
-            {% endfor %}
-          </div>
-
+          <br>
           <div class="form-group">
             {{ form.submit(class="btn btn-primary") }}
           </div>
@@ -88,6 +73,7 @@
 </main>
 
 {% include "footer.html" %}
+
 <style>
   /* Add transition to the body for smooth fade-in */
   body {
@@ -105,6 +91,29 @@
   // Add 'loaded' class to body to trigger fade-in effect
   window.addEventListener('load', function() {
     document.body.classList.add('loaded');
+
+    // Ensure reCAPTCHA is reset on page load/refresh
+    if (typeof grecaptcha !== "undefined") {
+      grecaptcha.reset();  // Reset reCAPTCHA widget
+    }
+  });
+
+  // Set the timeout to reset CAPTCHA after 1 minute (60,000 ms)
+  let captchaTimeout = setTimeout(function() {
+    if (typeof grecaptcha !== "undefined") {
+      grecaptcha.reset();  // Reset the reCAPTCHA widget
+    }
+  }, 60000);  // 1 minute timeout
+
+  // Reset the timeout when the user interacts with the form
+  document.querySelector('form').addEventListener('submit', function() {
+    clearTimeout(captchaTimeout);  // Clear previous timeout
+    captchaTimeout = setTimeout(function() {
+      if (typeof grecaptcha !== "undefined") {
+        grecaptcha.reset();  // Reset the reCAPTCHA widget again after 1 minute
+      }
+    }, 60000);  // Reset the countdown
   });
 </script>
+
 {% endblock %}

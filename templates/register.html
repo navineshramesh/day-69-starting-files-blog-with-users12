@@ -1,5 +1,7 @@
 {% block content %}
 {% include "header.html" %}
+<link rel="canonical" href="{{ url_for('get_all_posts') }}">
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <!-- Page Header -->
 <header
@@ -64,22 +66,8 @@
             {% endfor %}
           </div>
 
-          {% if captcha_image %}
-              <div class="form-group">
-                  <img src="{{ url_for('static', filename='captchas/' + captcha_image) }}" alt="CAPTCHA Image">
-              </div>
-          {% else %}
-              <p>No CAPTCHA image available.</p>
-          {% endif %}
-
-          <div class="form-group">
-            {{ form.captcha.label(class="form-label") }}
-            {{ form.captcha(class="form-control", size=32) }}<br>
-            {% for error in form.captcha.errors %}
-              <div class="text-danger">{{ error }}</div>
-            {% endfor %}
-          </div>
-
+          <div class="g-recaptcha" data-sitekey="6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO"></div>
+          <br>
           <div class="form-group">
             {{ form.submit(class="btn btn-primary") }}
           </div>
@@ -109,5 +97,33 @@
     document.body.classList.add('loaded');
   });
 </script>
-{% endblock %}
+<script>
+  // Add 'loaded' class to body to trigger fade-in effect
+  window.addEventListener('load', function() {
+    document.body.classList.add('loaded');
 
+    // Ensure reCAPTCHA is reset on page load/refresh
+    if (typeof grecaptcha !== "undefined") {
+      grecaptcha.reset();  // Reset reCAPTCHA widget
+    }
+  });
+
+  // Set the timeout to reset CAPTCHA after 1 minute (60,000 ms)
+  let captchaTimeout = setTimeout(function() {
+    if (typeof grecaptcha !== "undefined") {
+      grecaptcha.reset();  // Reset the reCAPTCHA widget
+    }
+  }, 60000);  // 1 minute timeout
+
+  // Reset the timeout when the user interacts with the form
+  document.querySelector('form').addEventListener('submit', function() {
+    clearTimeout(captchaTimeout);  // Clear previous timeout
+    captchaTimeout = setTimeout(function() {
+      if (typeof grecaptcha !== "undefined") {
+        grecaptcha.reset();  // Reset the reCAPTCHA widget again after 1 minute
+      }
+    }, 60000);  // Reset the countdown
+  });
+</script>
+
+{% endblock %}
