@@ -248,8 +248,7 @@ def chat():
     if form.validate_on_submit():
         # Create a new message
         new_message = Chat(chat_message=form.chat_message.data)
-        if 'php' or 'http' or '.com' or '://'in new_message:
-            abort(400, description="PHP links are not allowed.")
+
         sanitized_message = bleach.clean(new_message, tags=['b', 'i', 'u'])
         db.session.add(sanitized_message)
         db.session.commit()
