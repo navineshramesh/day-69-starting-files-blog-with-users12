@@ -1,5 +1,5 @@
 from email.mime.text import MIMEText
-from flask import Flask, abort, render_template, redirect, url_for, flash, request, session
+from flask import Flask, abort, render_template, redirect, url_for, flash, request, session, make_response
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor,CKEditorField
 from flask_gravatar import Gravatar
@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
+import bleach
 from functools import wraps
 from captcha.image import ImageCaptcha
 import time
@@ -16,13 +17,13 @@ import requests
 import datetime as dt
 import smtplib
 import random
-
+import secrets
 import string
 import os
 import sqlite3
-
+print(bleach.__version__)
 # Import your forms from forms.py
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ChatForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
@@ -32,7 +33,6 @@ import flask_bootstrap
 class CommentForm(FlaskForm):
     comment = CKEditorField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit Comment")
-# Initialize the Flask app and configurations
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI","sqlite:///posts.db")
@@ -75,11 +75,6 @@ ten_articles = articles[:6]
 # Gravatar setup
 gravatar = Gravatar(app, size=100, rating='g', default='retro')
 
-# CAPTCHA setup
-CAPTCHA_FOLDER = "static/captchas"
-if not os.path.exists(CAPTCHA_FOLDER):
-    os.makedirs(CAPTCHA_FOLDER)
-
 # Database Models
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
@@ -91,7 +86,10 @@ class BlogPost(db.Model):
     author: Mapped[str] = mapped_column(String(250), nullable=False)
     img_url: Mapped[str] = mapped_column(String(250), nullable=False)
     comments = relationship("Comment", back_populates="parent_post")
-
+class Chat(db.Model):
+    __tablename__ = "chat_message"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chat_message: Mapped[str] = mapped_column(String(250), nullable= False)
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
@@ -118,8 +116,36 @@ class Comment(db.Model):
 with app.app_context():
     db.create_all()
 
+# Determine the environment
+ENV = os.getenv('FLASK_ENV', 'development')
 
-# Helper Functions for CAPTCHA
+@app.after_request
+def set_security_headers(response):
+    # Generate a random nonce for inline scripts (if you're using inline scripts)
+    nonce_value = secrets.token_hex(16)
+
+    # Content Security Policy (CSP) allowing everything you need, including CKEditor
+    response.headers['Content-Security-Policy'] = (
+        f"default-src 'self' *; "  # Allow resources from your own domain and any other source
+        f"script-src 'self' 'unsafe-inline' 'unsafe-eval' * cdn.ckeditor.com; "  # Allow inline scripts, CKEditor CDN
+        f"style-src 'self' 'unsafe-inline' * cdn.ckeditor.com; "  # Allow inline styles, CKEditor CDN
+        f"font-src 'self' *; "  # Allow all font sources
+        f"img-src 'self' * data:; "  # Allow all image sources (including Gravatar and inline data URIs)
+        f"connect-src 'self' *; "  # Allow connections to all external sources (e.g., APIs, databases)
+        f"object-src 'none'; "  # Block Flash, Java applets, and other objects
+        f"frame-ancestors 'none'; "  # Prevent your site from being embedded in an iframe
+        f"base-uri 'self'; "  # Restrict base URI to your domain
+        f"form-action 'self';"  # Restrict form actions to your own domain
+    )
+
+    # Other security headers
+    response.headers['Strict-Transport-Security'] = "max-age=31536000; includeSubDomains; preload"
+    response.headers['Referrer-Policy'] = "strict-origin-when-cross-origin"
+    response.headers['X-Content-Type-Options'] = "nosniff"
+    response.headers['X-Frame-Options'] = "DENY"
+    response.headers['Cross-Origin-Resource-Policy'] = "same-origin"
+
+    return response
 
 
 # User Loader for Flask-Login
@@ -154,7 +180,6 @@ def get_all_posts():
 def show_terms():
     return render_template("privacyandpolicy.html")
 
-
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
@@ -168,14 +193,14 @@ def register():
     if form.validate_on_submit():
         # Check if the reCAPTCHA token has expired
         if 'captcha_expiry' in session and time.time() > session['captcha_expiry']:
-            flash("reCAPTCHA has expired, please try again.", "warning")
+            flash("Your session has expired, please refresh the page.", "warning")
             return redirect(url_for('register'))  # Reload the page to reset CAPTCHA
 
         # Retrieve the reCAPTCHA response token
         response_token = request.form.get('g-recaptcha-response')
 
         if not response_token:
-            flash("reCAPTCHA verification failed. Please try again.", "danger")
+            flash("Please verify your identity again.", "danger")
             return redirect(url_for('register'))  # Reload the page if no CAPTCHA token
 
         # Verify reCAPTCHA with the response token
@@ -188,13 +213,16 @@ def register():
 
             # Prevent the use of "php" in any of the form fields (for security reasons)
             if 'php' in form.email.data or 'php' in form.password.data or 'php' in form.name.data:
-                abort(400, description="PHP links are not allowed.")  # Abort with a bad request error
+                abort(400, description="PHP links are not allowed.")
+
 
             # Hash the password before storing it in the database
             hashed_password = generate_password_hash(form.password.data, method='pbkdf2:sha256', salt_length=8)
+            sanitized_email = bleach.clean(form.email.data, tags=['b', 'i', 'u'])
+            sanitized_name = bleach.clean(form.name.data, tags=['b', 'i', 'u'])
 
             # Create a new user and save them to the database
-            new_user = User(email=form.email.data, name=form.name.data, password=hashed_password)
+            new_user = User(email=sanitized_email, name=sanitized_name, password=hashed_password)
             db.session.add(new_user)
             db.session.commit()
 
@@ -205,10 +233,34 @@ def register():
             return redirect(url_for("get_all_posts"))  # Redirect to the main page after registration
 
         else:
-            flash("reCAPTCHA verification failed. Please try again.", "danger")
+            flash("Something went wrong, please try again.", "danger")
             return redirect(url_for('register'))  # Reload the page if reCAPTCHA fails
 
     return render_template("register.html", form=form)
+
+
+@app.route('/chat', methods=['GET', 'POST'])
+@login_required
+def chat():
+    form = ChatForm()
+
+    # Handle form submission
+    if form.validate_on_submit():
+        # Create a new message
+        new_message = Chat(chat_message=form.chat_message.data)
+        if 'php' or 'http' or '.com' or '://'in new_message:
+            abort(400, description="PHP links are not allowed.")
+        sanitized_message = bleach.clean(new_message, tags=['b', 'i', 'u'])
+        db.session.add(sanitized_message)
+        db.session.commit()
+
+        # Redirect to the chat page to see the new message
+        return redirect(url_for('chat'))
+
+    # Fetch all chat messages from the database
+    messages = Chat.query.all()
+
+    return render_template('chat.html', form=form, messages=messages, current_user=current_user)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -222,7 +274,7 @@ def login():
     if form.validate_on_submit():
         # Check if CAPTCHA expired
         if 'captcha_expiry' in session and time.time() > session['captcha_expiry']:
-            flash("reCAPTCHA has expired, please try again.", "warning")
+            flash("Your session has expired, please refresh the page.", "warning")
             return redirect(url_for('login'))
 
         # Store the CAPTCHA expiry time for the next verification
@@ -258,6 +310,24 @@ def login():
             return redirect(url_for('login'))  # Keep user on the login page
 
     return render_template("login.html", form=form)
+@app.route('/profile')
+def profile():
+
+    user = current_user
+    if not user:
+        return "User not found", 404
+
+
+    return render_template('profile-page.html', user=current_user, gravatar=gravatar)
+@app.route('/delete_profile')
+def delete_profile():
+    user = current_user
+    db.session.delete(user)
+    db.session.commit()
+
+    logout_user()
+    flash("Successfully Deleted Account")
+    return redirect(url_for('profile'))
 def verify_recaptcha(response_token, secret_key):
     url = "https://www.google.com/recaptcha/api/siteverify"
     payload = {

@@ -17,6 +17,8 @@ class CreatePostForm(FlaskForm):
     body = CKEditorField("Blog Content", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
 
+class ChatForm(FlaskForm):
+    chat_message= StringField("Chat_message", validators=[DataRequired()])
 
 # Create a form to register new users
 class RegisterForm(FlaskForm):

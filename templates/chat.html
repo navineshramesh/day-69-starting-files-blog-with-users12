@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+            margin: 0;
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px;
+            height: 80vh;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-messages {
+            overflow-y: auto;
+            flex: 1;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        .senderImage {
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;  /* This makes the container a circle */
+            overflow: hidden;
+            margin-right: 10px;
+        }
+        .senderImage img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;  /* This makes the image inside the container a circle */
+        }
+        .chatText {
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-radius: 5px;
+            max-width: 80%;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
+        .form-control {
+            margin-bottom: 10px;
+        }
+        .primary {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .primary:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat</h1>
+
+    <div class="chat-container">
+        <!-- Display messages -->
+        <div class="chat-messages">
+            {% for message in messages %}
+                <div class="message">
+                    <div class="senderImage">
+                        <img src="{{ current_user.email | gravatar }}" alt="User Gravatar">
+                    </div>
+                    <div class="chatText">
+                        {{ message.chat_message }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Chat form to send a new message -->
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-control">
+                {{ form.chat_message.label }}
+                {{ form.chat_message() }}
+            </div>
+            <button type="submit" class="primary">Send</button>
+        </form>
+    </div>
+</body>
+</html>
+

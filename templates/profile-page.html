@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            max-width: 900px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .profile-header img {
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+        .profile-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #333;
+        }
+        .profile-header p {
+            font-size: 1.1rem;
+            color: #555;
+        }
+        .profile-details {
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
+        .profile-details li {
+            list-style: none;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .profile-actions {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .profile-actions a {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .profile-actions a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+{% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="alert alert-warning">
+              <ul class="mb-0">
+                {% for category, message in messages %}
+                  <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endwith %}
+<div class="container">
+    <div class="profile-header">
+        <!-- Check if the user is authenticated before displaying Gravatar -->
+        {% if current_user.is_authenticated %}
+            <img src="{{ gravatar(current_user.email) }}" alt="Profile Picture">
+            <h1>{{ current_user.name }}</h1>
+            <p>{{ current_user.email }}</p>
+        {% else %}
+            <!-- Default image if user is not logged in -->
+            <img src="https://www.gravatar.com/avatar/?d=mm" alt="Default Profile Picture">
+            <h1>Guest User</h1>
+            <p>No email available</p>
+        {% endif %}
+    </div>
+
+    <div class="profile-details">
+        <ul>
+            {% if current_user.is_authenticated %}
+                <li><strong>Username:</strong> {{ current_user.name }}</li>
+                <li><strong>Email:</strong> {{ current_user.email }}</li>
+            {% else %}
+                <li><strong>Username:</strong> Guest</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="profile-actions">
+        {% if current_user.is_authenticated %}
+            <a href="{{url_for('delete_profile')}}">Delete Profile</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>
+
