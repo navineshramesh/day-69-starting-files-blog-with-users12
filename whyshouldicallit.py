@@ -249,17 +249,24 @@ def chat():
         # Create a new message
         new_message = Chat(chat_message=form.chat_message.data)
 
-        sanitized_message = bleach.clean(new_message, tags=['b', 'i', 'u'])
-        db.session.add(sanitized_message)
+        # Sanitize the chat_message (the string) before saving it to the database
+        sanitized_message = bleach.clean(new_message.chat_message, tags=['b', 'i', 'u'])
+
+        # Update the new_message object with the sanitized message
+        new_message.chat_message = sanitized_message
+
+        # Add the sanitized message to the database
+        db.session.add(new_message)
         db.session.commit()
 
         # Redirect to the chat page to see the new message
         return redirect(url_for('chat'))
 
     # Fetch all chat messages from the database
-    messages = Chat.query.all()
+    messages = Chat.query.order_by(Chat.id.desc()).all()
 
     return render_template('chat.html', form=form, messages=messages, current_user=current_user)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()

@@ -33,7 +33,7 @@ class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     recaptcha = RecaptchaField()  # This is the reCAPTCHA field  # Ensure this line is present
-    submit = SubmitField("Register")
+    submit = SubmitField("Login")
 
 
 # TODO: Create a CommentForm so users can leave comments below posts
