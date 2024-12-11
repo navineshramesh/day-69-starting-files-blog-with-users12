@@ -9,6 +9,9 @@ from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import Integer, String, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
+from sqlalchemy import Integer, String, Text, DateTime
+import time
+from datetime import datetime
 import bleach
 from functools import wraps
 from captcha.image import ImageCaptcha
@@ -74,8 +77,8 @@ articles = news_response.json().get("articles", [])
 ten_articles = articles[:6]
 # Gravatar setup
 gravatar = Gravatar(app, size=100, rating='g', default='retro')
+from alembic import op
 
-# Database Models
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -86,11 +89,15 @@ class BlogPost(db.Model):
     author: Mapped[str] = mapped_column(String(250), nullable=False)
     img_url: Mapped[str] = mapped_column(String(250), nullable=False)
     comments = relationship("Comment", back_populates="parent_post")
-class Chat(db.Model):
-    __tablename__ = "chat_message"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    chat_message: Mapped[str] = mapped_column(String(250), nullable= False)
 
+class Chat(db.Model):  # Ensure this inherits from db.Model
+    __tablename__ = "chat_messages"
+
+    id = db.Column(Integer, primary_key=True)
+    chat_message = mapped_column(String(250), nullable=False)
+    sender_name = mapped_column(String(250), nullable=False)
+    sender_email = mapped_column(String(250), nullable=False)
+    time_sent = mapped_column(DateTime, default=datetime.utcnow)
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -254,9 +261,18 @@ def chat():
 
         # Update the new_message object with the sanitized message
         new_message.chat_message = sanitized_message
+        sender_name = current_user.name
+        sender_email = current_user.email
+        time_sent = datetime.now()
 
         # Add the sanitized message to the database
-        db.session.add(new_message)
+        params = Chat(
+            chat_message=sanitized_message,  # Ensure it's just the sanitized string
+            sender_name=sender_name,
+            sender_email=sender_email,
+            time_sent=time_sent  # Corrected here
+        )
+        db.session.add(params)
         db.session.commit()
 
         # Redirect to the chat page to see the new message
@@ -265,8 +281,11 @@ def chat():
     # Fetch all chat messages from the database
     messages = Chat.query.order_by(Chat.id.desc()).all()
 
-    return render_template('chat.html', form=form, messages=messages, current_user=current_user)
 
+    return render_template('chat.html', form=form, messages=messages, current_user=current_user)
+@app.route('/termsofuse')
+def show_terms_of_use():
+    return render_template('aup.html')
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()

@@ -63,6 +63,14 @@
             word-wrap: break-word;
             font-size: 14px;
         }
+        .senderInfo {
+            font-size: 12px;
+            color: #777;
+            margin-top: 5px;
+        }
+        .senderInfo .timeSent {
+            font-style: italic;
+        }
         .form-control {
             margin-bottom: 10px;
         }
@@ -88,10 +96,13 @@
             {% for message in messages %}
                 <div class="message">
                     <div class="senderImage">
-                        <img src="{{ current_user.email | gravatar }}" alt="User Gravatar">
+                        <img src="{{ message.sender_email | gravatar }}" alt="User Gravatar">
                     </div>
                     <div class="chatText">
                         {{ message.chat_message }}
+                    </div>
+                    <div class="senderInfo">
+                        <strong>{{ message.sender_name }}</strong> - <span class="timeSent">{{ message.time_sent.strftime('%Y-%m-%d %H:%M:%S') }}</span>
                     </div>
                 </div>
             {% endfor %}
@@ -109,4 +120,3 @@
     </div>
 </body>
 </html>
-

@@ -1,9 +1,127 @@
 {% block content %}
 {% include "header.html" %}
+<style>
+/* General styling for the modal */
+.modal.fade {
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark background */
+  transition: opacity 0.3s ease-in-out;
+}
 
+/* Modal dialog */
+.modal-dialog {
+  max-width: 500px;
+  margin: 10% auto;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Modal content */
+.modal-content {
+  background-color: #fff;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+/* Modal header */
+.modal-header {
+  border-bottom: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0;
+}
+
+/* Close button */
+#closeButton {
+  font-size: 1.5rem;
+  color: #333;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out;
+}
+
+#closeButton:hover {
+  transform: scale(1.2);
+}
+
+/* Modal body */
+.modal-body h1 {
+  font-size: 2rem;
+  color: #007bff; /* Bootstrap primary color */
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Modal footer */
+.modal-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border-top: none;
+}
+
+/* Buttons in modal footer */
+.modal-footer .btn {
+  width: 100%;
+  max-width: 200px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 5px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.modal-footer .btn:hover {
+  background-color: #0056b3; /* Darker shade of Bootstrap primary color */
+}
+
+#cancelButton {
+  background-color: #dc3545; /* Bootstrap danger color */
+  color: white;
+}
+
+#cancelButton:hover {
+  background-color: #c82333;
+}
+
+/* Modal footer text */
+.modal-footer h2 {
+  font-size: 1.25rem;
+  color: #6c757d; /* Bootstrap secondary color */
+  text-align: center;
+  margin: 10px 0;
+}
+</style>
+<meta name="description" content="Welcome to Navinesh's Blog, where I share insights on tech,news, gaming, and life. Explore my posts and join the conversation!">
 <link rel="canonical" href="{{ url_for('get_all_posts') }}">
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+
+        <button id= "closeButton" type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <h1>New User?</h1>
+      </div>
+      <div class="modal-footer">
+
+        <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('register') }}'">Sign up now!</button>
+        <h2>Explore more at homepage</h2>
+        <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('get_all_posts') }}'">Homepage</button>
+        <button type="button" class="btn btn-primary" id="cancelButton">Cancel</button>
+
+
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Page Header -->
 <header class="masthead" style="background-image: url('../static/assets/img/login-bg.jpg')">
   <div class="container position-relative px-4 px-lg-5">
@@ -85,11 +203,45 @@
   body.loaded {
     opacity: 1;
   }
+
+  /* Floating popup on the right side */
+  #popup {
+      display: none; /* Initially hidden */
+      position: fixed;
+      top: 20px;  /* Adjusted to appear on top */
+      right: 20px; /* Positioning to the right */
+      background: rgba(255, 0, 0, 0.8); /* Red background */
+      color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      font-weight: bold;
+      text-align: center;
+      width: auto;
+  }
+
+  #popup a {
+      color: #fff; /* White text for the link */
+      text-decoration: none;
+      font-weight: bold;
+  }
+
+  #popup a:hover {
+      text-decoration: underline;
+  }
+
+  .show {
+      display: block; /* Show popup when the class is added */
+  }
 </style>
 
 <script>
-  // Add 'loaded' class to body to trigger fade-in effect
-  window.addEventListener('load', function() {
+  window.addEventListener('DOMContentLoaded', function() {
+    // Make sure popup is visible
+    document.getElementById('popup').classList.add('show');
+
+    // Add 'loaded' class to body to trigger fade-in effect
     document.body.classList.add('loaded');
 
     // Ensure reCAPTCHA is reset on page load/refresh
@@ -98,22 +250,36 @@
     }
   });
 
-  // Set the timeout to reset CAPTCHA after 1 minute (60,000 ms)
+  // Set timeout to reset CAPTCHA after 1 minute (60000 ms)
   let captchaTimeout = setTimeout(function() {
     if (typeof grecaptcha !== "undefined") {
-      grecaptcha.reset();  // Reset the reCAPTCHA widget
+      grecaptcha.reset();  // Reset reCAPTCHA widget
     }
-  }, 60000);  // 1 minute timeout
+  }, 60000);  // 1-minute timeout
 
-  // Reset the timeout when the user interacts with the form
+  // Reset timeout when user interacts with the form
   document.querySelector('form').addEventListener('submit', function() {
     clearTimeout(captchaTimeout);  // Clear previous timeout
     captchaTimeout = setTimeout(function() {
       if (typeof grecaptcha !== "undefined") {
         grecaptcha.reset();  // Reset the reCAPTCHA widget again after 1 minute
       }
-    }, 60000);  // Reset the countdown
+    }, 60000);  // Reset countdown
   });
+</script>
+<script>
+    window.addEventListener('load', function () {
+        const modal = new bootstrap.Modal(document.getElementById('exampleModal'));
+        modal.show();
+
+        // Correcting getElementById and arrow function syntax
+        document.getElementById('closeButton').addEventListener('click', () => {
+            modal.hide();
+        });
+        document.getElementById('cancelButton').addEventListener('click', () => {
+            modal.hide();
+        });
+    });
 </script>
 
 {% endblock %}

@@ -1,4 +1,5 @@
 from flask import Flask
+from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, URL, Email
@@ -19,6 +20,7 @@ class CreatePostForm(FlaskForm):
 
 class ChatForm(FlaskForm):
     chat_message= StringField("Chat_message", validators=[DataRequired()])
+
 
 # Create a form to register new users
 class RegisterForm(FlaskForm):
