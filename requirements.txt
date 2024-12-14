@@ -13,3 +13,4 @@ psycopg2-binary==2.9.9
 captcha==0.6.0
 requests==2.32.3
 bleach==6.2.0
+alembic==1.14.0
