@@ -449,10 +449,12 @@ def delete_post(post_id):
     return redirect(url_for("get_all_posts"))
 
 
-@app.route("/post/<int:post_id>", methods=["GET", "POST"])
-def show_post(post_id):
-    post = BlogPost.query.get_or_404(post_id)
+@app.route("/post/<string:post_title>", methods=["GET", "POST"])
+def show_post(post_title):
+    # Assuming 'slug' or 'title' is a unique identifier for the post
+    post = BlogPost.query.filter_by(title=post_title).first_or_404()  # Query by title or slug
     form = CommentForm()
+
     if form.validate_on_submit():
         if not current_user.is_authenticated:
             flash("You need to log in to comment.")
@@ -465,8 +467,13 @@ def show_post(post_id):
         )
         db.session.add(new_comment)
         db.session.commit()
-        return redirect(url_for("show_post", post_id=post.id))
+
+        # Redirect to the same post after the comment is added
+        return redirect(url_for("show_post", post_title=post.title))  # Use post_title instead of id
+
     return render_template("post.html", post=post, form=form)
+
+
 @app.route("/about")
 def about():
     return render_template("about.html")
