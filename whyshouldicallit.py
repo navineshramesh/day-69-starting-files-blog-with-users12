@@ -30,7 +30,7 @@ from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ChatForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
-
+import psycopg2
 import flask_bootstrap
 
 class CommentForm(FlaskForm):
@@ -38,7 +38,7 @@ class CommentForm(FlaskForm):
     submit = SubmitField("Submit Comment")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI","sqlite:///posts.db")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
