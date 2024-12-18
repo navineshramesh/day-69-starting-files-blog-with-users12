@@ -38,7 +38,7 @@ class CommentForm(FlaskForm):
     submit = SubmitField("Submit Comment")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:shashini%4015@192.168.8.30:5432/postgres'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:shashini%4015@80.233.58.183:5432/postgres'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
