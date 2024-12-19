@@ -30,14 +30,6 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 import psycopg2
-import flask_bootstrap
-conn=psycopg2.connect(
-      host='localhost',
-      database="postgres",
-      user="postgres",
-      password="shashini@15"
-     )
-
 class CommentForm(FlaskForm):
     comment = CKEditorField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit Comment")
