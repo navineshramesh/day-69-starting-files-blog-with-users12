@@ -14,7 +14,6 @@ import time
 from datetime import datetime
 import bleach
 from functools import wraps
-from captcha.image import ImageCaptcha
 import time
 import requests
 import smtplib
