@@ -31,20 +31,25 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 import psycopg2
 import flask_bootstrap
+conn=psycopg2.connect(
+      host='localhost',
+      database="postgres",
+      user="postgres",
+      password="shashini@15"
+     )
 
 class CommentForm(FlaskForm):
     comment = CKEditorField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit Comment")
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:shashini%4015@80.233.58.183:5432/postgres?connect_timeout=10&sslmode=prefer'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ckeditor = CKEditor(app)
 Bootstrap5(app)
-app.config['RECAPTCHA_PUBLIC_KEY'] = '6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO'  # Public key (Site key)
+app.config['RECAPTCHA_cPUBLIC_KEY'] = '6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO'  # Public key (Site key)
 app.config['RECAPTCHA_PRIVATE_KEY'] = '6LfPMYsqAAAAAHVtW7ll9IY5dh-Uj_WKb8GlrMIZ'  # Private key (Secret key)
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:shashini%4015@192.168.8.30:5432/postgres?connect_timeout=20&sslmode=prefer'
 
 # Initialize SQLAlchemy and Flask-Login
 class Base(DeclarativeBase):
