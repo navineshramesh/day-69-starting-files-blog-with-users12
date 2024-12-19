@@ -10,7 +10,6 @@ from sqlalchemy import Integer, String, Text
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date
 from sqlalchemy import Integer, String, Text, DateTime
-import time
 from datetime import datetime
 import bleach
 from functools import wraps
