@@ -20,140 +20,140 @@ import random
 import secrets
 import string
 import os
+import psycopg2
+from flask import Flask, abort, render_template, redirect, url_for, flash, request, session, make_response
+from flask_bootstrap import Bootstrap5
+from flask_ckeditor import CKEditor, CKEditorField
+from flask_gravatar import Gravatar  # <-- Gravatar import added here
+from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Integer, String, Text
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import date
+from datetime import datetime # <-- datetime import added here
+import bleach
+from functools import wraps
+import time
+import requests
+import smtplib
+import random
+import secrets
+import string
+import os
 import sqlite3
+from email.mime.text import MIMEText  # <-- MIMEText import added here
 print(bleach.__version__)
 # Import your forms from forms.py
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, ChatForm
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
-import psycopg2
-class CommentForm(FlaskForm):
-    comment = CKEditorField("Comment", validators=[DataRequired()])
-    submit = SubmitField("Submit Comment")
+
+# Setup the PostgreSQL connection
+DATABASE_URL = 'postgresql://postgres:shashini%4015@192.168.8.30:5432/postgres?connect_timeout=20&sslmode=prefer'
+
+# Create a connection to PostgreSQL
+conn = psycopg2.connect(DATABASE_URL)
+cur = conn.cursor()
+
+# Test the connection
+cur.execute('SELECT version();')
+db_version = cur.fetchone()
+print("Connected to database:", db_version)
+
+# Initialize the Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 
+# Initialize Flask extensions
 ckeditor = CKEditor(app)
 Bootstrap5(app)
-app.config['RECAPTCHA_cPUBLIC_KEY'] = '6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO'  # Public key (Site key)
-app.config['RECAPTCHA_PRIVATE_KEY'] = '6LfPMYsqAAAAAHVtW7ll9IY5dh-Uj_WKb8GlrMIZ'  # Private key (Secret key)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:shashini%4015@192.168.8.30:5432/postgres?connect_timeout=20&sslmode=prefer'
 
-# Initialize SQLAlchemy and Flask-Login
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
-
+# Flask-Login Setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-list_of_companies = ["Tesla Inc", "Apple Inc", "Microsoft Corporation"]
-listed_companies= random.choice(list_of_companies)
 
-db.init_app(app)
-STOCK = "TSLA"
+# Initialize SQLAlchemy
+db = SQLAlchemy(app)
 
-NEWS_URL = "https://newsapi.org/v2/everything?"
-news_apikey = os.environ.get("Api_key")
-COMPANY_NAME = f"{listed_companies}"
-
-news_parameters = {
-    "qInTitle": COMPANY_NAME,
-    "apiKey": news_apikey,
-    "PageSize":5
-}
-
-news_response = requests.get(url=NEWS_URL, params=news_parameters)
-articles = news_response.json().get("articles", [])
-ten_articles = articles[:6]
-# Gravatar setup
-gravatar = Gravatar(app, size=100, rating='g', default='retro')
-from alembic import op
+# Define your models
+class Base(DeclarativeBase):
+    pass
 
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    title: Mapped[str] = mapped_column(String(250), unique=True, nullable=False)
-    subtitle: Mapped[str] = mapped_column(String(250), nullable=False)
-    date: Mapped[str] = mapped_column(String(250), nullable=False)
-    body: Mapped[str] = mapped_column(Text, nullable=False)
-    author: Mapped[str] = mapped_column(String(250), nullable=False)
-    img_url: Mapped[str] = mapped_column(String(250), nullable=False)
+    id = mapped_column(Integer, primary_key=True)
+    title = mapped_column(String(250), unique=True, nullable=False)
+    subtitle = mapped_column(String(250), nullable=False)
+    date = mapped_column(String(250), nullable=False)
+    body = mapped_column(Text, nullable=False)
+    author = mapped_column(String(250), nullable=False)
+    img_url = mapped_column(String(250), nullable=False)
     comments = relationship("Comment", back_populates="parent_post")
 
-class Chat(db.Model):  # Ensure this inherits from db.Model
-    __tablename__ = "chat_messages"
+class Comment(db.Model):
+    __tablename__ = "comments"
+    id = mapped_column(Integer, primary_key=True)
+    text = mapped_column(Text, nullable=False)
+    author_id = mapped_column(Integer, db.ForeignKey("users.id"))
+    comment_author = relationship("User", back_populates="comments")
+    post_id = mapped_column(Integer, db.ForeignKey("blog_posts.id"))
+    parent_post = relationship("BlogPost", back_populates="comments")
 
+class Chat(db.Model):
+    __tablename__ = "chat_messages"
     id = db.Column(Integer, primary_key=True)
     chat_message = mapped_column(String(250), nullable=False)
     sender_name = mapped_column(String(250), nullable=False)
     sender_email = mapped_column(String(250), nullable=False)
     time_sent = mapped_column(DateTime, default=datetime.utcnow)
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    email: Mapped[str] = mapped_column(String(100), unique=True)
-    password: Mapped[str] = mapped_column(String(100))
-    name: Mapped[str] = mapped_column(String(100))
+    id = mapped_column(Integer, primary_key=True)
+    email = mapped_column(String(100), unique=True)
+    password = mapped_column(String(100))
+    name = mapped_column(String(100))
     comments = relationship("Comment", back_populates="comment_author")
 
-class Comment(db.Model):
-    __tablename__ = "comments"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
-    # Child relationship:"users.id" The users refers to the tablename of the User class.
-    # "comments" refers to the comments property in the User class.
-    author_id: Mapped[int] = mapped_column(Integer, db.ForeignKey("users.id"))
-    comment_author = relationship("User", back_populates="comments")
-    # Child Relationship to the BlogPosts
-    post_id: Mapped[str] = mapped_column(Integer, db.ForeignKey("blog_posts.id"))
-    parent_post = relationship("BlogPost", back_populates="comments")
-
-
-
+# Create the database tables
 with app.app_context():
     db.create_all()
 
-# Determine the environment
-ENV = os.getenv('FLASK_ENV', 'development')
+# Flask-Login User Loader
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
 
+# Gravatar setup
+gravatar = Gravatar(app, size=100, rating='g', default='retro')  # <-- Gravatar initialization added here
+
+# Security headers
 @app.after_request
 def set_security_headers(response):
-    # Generate a random nonce for inline scripts (if you're using inline scripts)
     nonce_value = secrets.token_hex(16)
-
-    # Content Security Policy (CSP) allowing everything you need, including CKEditor
     response.headers['Content-Security-Policy'] = (
-        f"default-src 'self' *; "  # Allow resources from your own domain and any other source
-        f"script-src 'self' 'unsafe-inline' 'unsafe-eval' * cdn.ckeditor.com; "  # Allow inline scripts, CKEditor CDN
-        f"style-src 'self' 'unsafe-inline' * cdn.ckeditor.com; "  # Allow inline styles, CKEditor CDN
-        f"font-src 'self' *; "  # Allow all font sources
-        f"img-src 'self' * data:; "  # Allow all image sources (including Gravatar and inline data URIs)
-        f"connect-src 'self' *; "  # Allow connections to all external sources (e.g., APIs, databases)
-        f"object-src 'none'; "  # Block Flash, Java applets, and other objects
-        f"frame-ancestors 'none'; "  # Prevent your site from being embedded in an iframe
-        f"base-uri 'self'; "  # Restrict base URI to your domain
-        f"form-action 'self';"  # Restrict form actions to your own domain
+        f"default-src 'self' *; "
+        f"script-src 'self' 'unsafe-inline' 'unsafe-eval' * cdn.ckeditor.com; "
+        f"style-src 'self' 'unsafe-inline' * cdn.ckeditor.com; "
+        f"font-src 'self' *; "
+        f"img-src 'self' * data:; "
+        f"connect-src 'self' *; "
+        f"object-src 'none'; "
+        f"frame-ancestors 'none'; "
+        f"base-uri 'self'; "
+        f"form-action 'self';"
     )
-
-    # Other security headers
     response.headers['Strict-Transport-Security'] = "max-age=31536000; includeSubDomains; preload"
     response.headers['Referrer-Policy'] = "strict-origin-when-cross-origin"
     response.headers['X-Content-Type-Options'] = "nosniff"
     response.headers['X-Frame-Options'] = "DENY"
     response.headers['Cross-Origin-Resource-Policy'] = "same-origin"
-
     return response
-
-
-# User Loader for Flask-Login
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(User, int(user_id))
-
 
 # Admin-only decorator
 def admin_only(f):
@@ -163,12 +163,6 @@ def admin_only(f):
             return abort(403)
         return f(*args, **kwargs)
     return decorated_function
-
-
-# Create all tables
-with app.app_context():
-    db.create_all()
-
 # Routes
 @app.route('/')
 def get_all_posts():
