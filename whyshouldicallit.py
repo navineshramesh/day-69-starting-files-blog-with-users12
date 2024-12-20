@@ -51,13 +51,12 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
 # Setup the PostgreSQL connection
-DATABASE_URL = 'postgresql://postgres:shashini%4015@192.168.8.30:5432/postgres?connect_timeout=20&sslmode=prefer'
+DATABASE_URL ="postgresql://postgres:PsgEFHReaBQuSHWtzysgEyhhlijcsODG@autorack.proxy.rlwy.net:57256/railway"
 
 # Create a connection to PostgreSQL
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 
-# Test the connection
 cur.execute('SELECT version();')
 db_version = cur.fetchone()
 print("Connected to database:", db_version)
@@ -67,6 +66,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("Flask_key")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['RECAPTCHA_cPUBLIC_KEY'] = '6LfPMYsqAAAAADWYYlBcpO2ngC8M6t5bfIfXRbTO'  # Public key (Site key)
+app.config['RECAPTCHA_PRIVATE_KEY'] = '6LfPMYsqAAAAAHVtW7ll9IY5dh-Uj_WKb8GlrMIZ'  # Private key (Secret key)
 
 # Initialize Flask extensions
 ckeditor = CKEditor(app)
