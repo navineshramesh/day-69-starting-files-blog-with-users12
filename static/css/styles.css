@@ -270,20 +270,24 @@ pre {
   display: block;
   margin-top: 0;
   margin-bottom: 1rem;
-  overflow: auto;
   font-size: 0.875em;
+  white-space: pre-wrap;  /* Ensure text wraps */
+  word-wrap: break-word;  /* Break long words to prevent overflow */
 }
+
 pre code {
   font-size: inherit;
   color: inherit;
-  word-break: normal;
+  word-break: break-word;  /* Ensure long lines break correctly */
+  white-space: normal;     /* Ensure wrapping inside code block */
 }
 
 code {
   font-size: 0.875em;
   color: var(--bs-code-color);
-  word-wrap: break-word;
+  word-wrap: break-word;  /* Ensure long words break correctly */
 }
+
 a > code {
   color: inherit;
 }

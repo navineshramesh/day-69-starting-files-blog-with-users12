@@ -1,25 +1,6 @@
-from email.mime.text import MIMEText
-from flask import Flask, abort, render_template, redirect, url_for, flash, request, session, make_response
-from flask_bootstrap import Bootstrap5
-from flask_ckeditor import CKEditor,CKEditorField
-from flask_gravatar import Gravatar
-from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user, login_required
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Integer, String, Text
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import date
+
+import re
 from sqlalchemy import Integer, String, Text, DateTime
-from datetime import datetime
-import bleach
-from functools import wraps
-import time
-import requests
-import smtplib
-import random
-import secrets
-import string
-import os
 import psycopg2
 from flask import Flask, abort, render_template, redirect, url_for, flash, request, session, make_response
 from flask_bootstrap import Bootstrap5
@@ -132,7 +113,10 @@ def load_user(user_id):
 
 # Gravatar setup
 gravatar = Gravatar(app, size=100, rating='g', default='retro')  # <-- Gravatar initialization added here
-
+@app.template_filter('remove_newlines')
+def remove_newlines(value):
+    # Use a regex to find '\\n\\n' and replace it with an empty string
+    return re.sub(r'\\n\\n', '', value)
 # Security headers
 @app.after_request
 def set_security_headers(response):
@@ -172,6 +156,9 @@ def get_all_posts():
 
     # Render the template with the posts
     return render_template("index.html", all_posts=posts,current_user=current_user)
+@app.template_filter('regex_replace')
+def regex_replace(value, pattern, replacement):
+    return re.sub(pattern, replacement, value)
 @app.route("/terms")
 def show_terms():
     return render_template("privacyandpolicy.html")
