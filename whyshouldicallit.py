@@ -32,9 +32,8 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
 # Setup the PostgreSQL connection
-DATABASE_URL ="postgresql://postgres:PsgEFHReaBQuSHWtzysgEyhhlijcsODG@autorack.proxy.rlwy.net:57256/railway"
-
-# Create a connection to PostgreSQL
+DATABASE_URL = f"{os.environ.get('DB_URI')}"
+#Create a connection to PostgreSQL
 conn = psycopg2.connect(DATABASE_URL)
 cur = conn.cursor()
 

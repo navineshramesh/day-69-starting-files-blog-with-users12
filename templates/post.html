@@ -1,6 +1,52 @@
 {% from "bootstrap5/form.html" import render_form %}
 {% include "header.html" %}
 
+<head>
+    <!-- Character Encoding and Viewport for responsiveness -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Dynamic Meta Tags -->
+    <meta name="description" content="{{ post.description }}">
+    <meta name="keywords" content="SEO, SEO Tips, {{ post.title }}">
+    <meta name="robots" content="index, follow">
+    <title>{{ post.title }} - My Website</title>
+
+    <!-- Dynamic Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "{{ post.title }}",
+      "description": "{{ post.body }}",
+      "author": {
+        "@type": "Person",
+        "name": "{{ post.author }}"
+      },
+      "datePublished": "{{ post.date }}",
+      "image": "{{ post.image_url }}",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Navinesh's Blog",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "static/assets/favicon.ico"
+        }
+      }
+    }
+    </script>
+
+    <!-- Open Graph Tags -->
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ post.description }}">
+    <meta property="og:image" content="{{ post.image_url }}">
+    <meta property="og:url" content="{{ post.url }}">
+    <meta property="og:type" content="article">
+
+    <!-- Dynamic Canonical Tag -->
+    <link rel="canonical" href="{{ post.url }}">
+</head>
+
 <!-- Page Header -->
 <header class="masthead" style="background-image: url('{{ post.img_url }}')">
   <div class="container position-relative px-4 px-lg-5">
@@ -28,7 +74,6 @@
       <div class="col-md-10 col-lg-8 col-xl-7">
         <!-- Remove escaped \n from post.body -->
         {{ post.body | remove_newlines | safe }}
-
 
         <!-- Only show Edit Post button if user id is 1 (admin user) -->
         {% if current_user.id == 1 %}
